@@ -1,0 +1,42 @@
+*****************  main input file for PreComp *****************************
+Sample Composite Blade Section Properties
+
+General information -----------------------------------------------
+20.15    Bl_length   : blade length (m)
+16       N_sections  : no of blade sections (-)
+5        N_materials : no of materials listed in the materials table (material.inp)
+3        Out_format  : output file   (1: general format, 2: BModes-format, 3: both)
+f        TabDelim     (true: tab-delimited table; false: space-delimited table)
+
+Blade-sections-specific data --------------------------------------
+Sec span     l.e.     chord   aerodynamic   af_shape    int str layup
+location   position   length    twist         file          file
+Span_loc    Le_loc    Chord    Tw_aero   Af_shape_file  Int_str_file
+  (-)        (-)       (m)    (degrees)       (-)           (-)
+
+0.0000      0.50      0.664     0.00      'af1-6.inp'    'int01.inp'
+0.0236      0.50      0.664     0.00      'af1-6.inp'    'int01.inp'
+0.0273      0.50      0.664     0.00      'af1-6.inp'    'int01.inp'
+0.0333      0.50      0.664     0.00      'af1-6.inp'    'int01.inp'
+0.0393      0.50      0.664     0.00      'af1-6.inp'    'int01.inp'
+0.0397      0.50      0.664     0.00      'af1-6.inp'    'int01.inp'
+0.1141      0.33      1.095    20.39      'af-07.inp'    'int01.inp'
+0.2184      0.25      1.68     16.02      'af8-9.inp'    'int01.inp'
+0.3226      0.25      1.539    11.65      'af8-9.inp'    'int01.inp'
+0.4268      0.25      1.254     6.96      'af-10.inp'    'int01.inp'
+0.5310      0.25      0.99      1.98      'af-11.inp'    'int01.inp'
+0.6352      0.25      0.79     -1.88      'af-12.inp'    'int01.inp'
+0.7395      0.25      0.61     -3.37      'af-13.inp'    'int01.inp'
+0.8437      0.25      0.455    -3.41      'af-14.inp'    'int01.inp'
+0.9479      0.25      0.454    -3.45      'af15-16.inp'  'int01.inp'
+1.0000      0.25      0.453    -3.47      'af15-16.inp'  'int01.inp'
+
+Webs (spars) data  --------------------------------------------------
+
+2        Nweb        : number of webs (-)  ! enter 0 if the blade has no webs
+7        Ib_sp_stn   : blade station number where inner-most end of webs is located (-)
+16       Ob_sp_stn   : blade station number where outer-most end of webs is located (-)
+
+Web_num   Inb_end_ch_loc   Oub_end_ch_loc (fraction of chord length)
+1              0.15            0.15
+2              0.50            0.50
