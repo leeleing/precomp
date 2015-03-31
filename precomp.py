@@ -6,6 +6,7 @@ Created on Mon Mar 30 10:17:05 2015
 """
 import sys
 import re
+import math
 
 # Version string
 Version = "0.1"
@@ -29,11 +30,16 @@ def PRDebug( str ):
         print >> sys.strdrr, str
         
 def Fatal( str ):
-	print >> sys.stderr, str
+	print >> sys.stderr, 'Error',str
 	sys.exit(-1)
  
+def Warn( str ):
+	print >> sys.stderr, 'Warning',str
+ 
 class MIF:
-    giPattern = re.compile(r'^([^\s]+)\s+.+')
+    """Main input file class
+    """
+    __giPattern = re.compile(r'^([^\s]+)\s+.+')
     
     def __init__( self ):
         self.name = ""
@@ -54,27 +60,61 @@ class MIF:
             pci.readline()
             
             try:
-                self.Bl_length  = float(self.ReadGeneralInformation( pci.readline()))
-                self.N_sections  = int(self.ReadGeneralInformation( pci.readline()))
-                self.N_materials  = int(self.ReadGeneralInformation( pci.readline()))
-                self.Out_format  = int(self.ReadGeneralInformation( pci.readline()))
-                self.TabDelim  = (self.ReadGeneralInformation( pci.readline()) == 't' and True) or False
+                self.Bl_length  = float(self.__ReadGeneralInformation( pci.readline()))
+                if self.Bl_length <= 0:
+                    raise Exception('blade length not positive')
+                    
+                self.N_sections  = int(self.__ReadGeneralInformation( pci.readline()))
+                if self.N_sections < 2:
+                    raise Exception('number of blade stations less than two')
+                    
+                self.N_materials  = int(self.__ReadGeneralInformation( pci.readline()))
+                
+                self.Out_format  = int(self.__ReadGeneralInformation( pci.readline()))
+                if self.Out_format <= 0 or self.Out_format > 3 :
+                    raise Exception('out_format flag not recognizable')
+                    
+                self.TabDelim  = (self.__ReadGeneralInformation( pci.readline()) == 't' and True) or False
+                                
             except Exception,ex:
                 Fatal('General information Read error:' + ex.message)
             
             for i in range(7):
                 pci.readline()
             
+            #read blade-sections-specific data
             for section in range(self.N_sections):
-                bss = BSS(pci.readline())
+                bss = BSS(pci.readline(), self.Bl_length)
+                
+                # check location of blade station
+                if section == 0:
+                    if abs(bss.Span_loc) > 0:
+                        Fatal('first blade station location not zero')
+                else:
+                    if bss.Span_loc > self.Bl_length:
+                        Fatal('blade station location exceeds blade length')
+                    if bss.Span_loc < self.BssD[section-1]:
+                        Fatal('blade station location decreasing')
+                        
+                #check leading edge location
+                if bss.Le_loc < 0:
+                    Warn('leading edge aft of reference axis')
+                
+                #check chord length
+                if bss.Chord <= 0:
+                     Fatal('chord length not positive')
+                
                 self.BssD.append(bss)
                 
             for i in range(3):
                 pci.readline()
-                
-            self.WebsD.Nweb = int(self.ReadGeneralInformation( pci.readline()))
-            self.WebsD.Ib_sp_stn = int(self.ReadGeneralInformation( pci.readline()))
-            self.WebsD.Ob_sp_stn = int(self.ReadGeneralInformation( pci.readline()))
+            
+            try:
+                self.WebsD.Nweb = int(self.__ReadGeneralInformation( pci.readline()))
+                self.WebsD.Ib_sp_stn = int(self.__ReadGeneralInformation( pci.readline()))
+                self.WebsD.Ob_sp_stn = int(self.__ReadGeneralInformation( pci.readline()))
+            except Exception,ex:
+                Fatal('Webs data Read error:' + ex.message)
             
             for i in range(2):
                 pci.readline()
@@ -85,9 +125,9 @@ class MIF:
             
             
             
-    def ReadGeneralInformation( self, line):
+    def __ReadGeneralInformation( self, line):
         try:
-            match = self.giPattern.match(line)
+            match = MIF.__giPattern.match(line)
             if match:
                 return match.group(1)
             raise Exception('can not match the general information:' + line) 
@@ -96,24 +136,29 @@ class MIF:
         
 
 class BSS:
-    linePattern = re.compile(r'^([\d\.-]+)\s+([\d\.-]+)\s+([\d\.-]+)\s+([\d\.-]+)\s+\'(\S+)\'\s+\'(\S+)\'')
+    """Blade-sections-specific data class
+    """
+    __linePattern = re.compile(r'^([\d\.-]+)\s+([\d\.-]+)\s+([\d\.-]+)\s+([\d\.-]+)\s+\'(\S+)\'\s+\'(\S+)\'')
     
-    def __init__( self, line):
+    def __init__( self, line, Bl_length):
         try:
-            match = self.linePattern.match(line)
+            match = BSS.__linePattern.match(line)
             if match:
-                self.Span_loc = float(match.group(1))
+                self.Span_loc = float(match.group(1)) * Bl_length
                 self.Le_loc = float(match.group(2))
                 self.Chord = float(match.group(3))
-                self.Tw_aero = float(match.group(4))
+                self.Tw_aero =  math.radians(float(match.group(4)))
                 self.Af_shape_file = match.group(5)
                 self.Int_str_file = match.group(6)
+                
             else:
                 raise Exception('can not match the blade Sections Specific data:' + line) 
         except Exception,ex:
             Fatal(ex.message)        
         
 class WEBS:
+    """Webs (spars) data class
+    """
     def __init__( self):
         self.Nweb = 0
         self.Ib_sp_stn = 0
@@ -121,11 +166,13 @@ class WEBS:
         self.Web_nums = []
         
 class WEB_NUM:
-    linePattern = re.compile(r'^(\d+)\s+([\d\.-]+)\s+([\d\.-]+).+')
+    """Web data class
+    """
+    __linePattern = re.compile(r'^(\d+)\s+([\d\.-]+)\s+([\d\.-]+).+')
     
     def __init__( self, line):
         try:
-            match = self.linePattern.match(line)
+            match = WEB_NUM.__linePattern.match(line)
             if match:
                 self.Web_num = int(match.group(1))
                 self.Inb_end_ch_loc = float(match.group(2))
