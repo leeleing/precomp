@@ -22,12 +22,12 @@ def PRSetDebugLevel(level):
 def PRInfo( str ):
     global DebugLevel
     if DebugLevel >= 1:
-        print >> sys.strdrr, str
+        print >> sys.stderr, str
 
 def PRDebug( str ):
     global DebugLevel
     if DebugLevel >= 2:
-        print >> sys.strdrr, str
+        print >> sys.stderr, str
         
 def Fatal( str ):
 	print >> sys.stderr, 'Error',str
@@ -50,6 +50,14 @@ class MIF:
         self.TabDelim = True
         self.BssD = []
         self.WebsD = WEBS()
+        
+        self.x1w = 0.0
+        self.l_web = 0.0
+        
+        self.r1w = 0.0
+        self.r2w = 0.0
+        self.ch1 = 0.0
+        self.ch2 = 0.0
     
     def Load( self, file):
         with open(file) as pci:
@@ -93,7 +101,7 @@ class MIF:
                 else:
                     if bss.Span_loc > self.Bl_length:
                         Fatal('blade station location exceeds blade length')
-                    if bss.Span_loc < self.BssD[section-1]:
+                    if bss.Span_loc < self.BssD[section-1].Span_loc:
                         Fatal('blade station location decreasing')
                         
                 #check leading edge location
@@ -105,26 +113,91 @@ class MIF:
                      Fatal('chord length not positive')
                 
                 self.BssD.append(bss)
+            
+            #get th_prime and phi_prime
+            self.__tw_rate()
+            
+            
                 
             for i in range(3):
                 pci.readline()
             
             try:
                 self.WebsD.Nweb = int(self.__ReadGeneralInformation( pci.readline()))
-                self.WebsD.Ib_sp_stn = int(self.__ReadGeneralInformation( pci.readline()))
-                self.WebsD.Ob_sp_stn = int(self.__ReadGeneralInformation( pci.readline()))
+                if self.WebsD.Nweb < 0:
+                    raise Exception('negative number of webs')
+                    
+                if self.WebsD.Nweb == 0:
+                    PRInfo('no webs in this blade')
+                    self.WebsD.Webs_exist = 0
+                    
+                if self.WebsD.Nweb >= 1:
+                    self.WebsD.Ib_sp_stn = int(self.__ReadGeneralInformation( pci.readline()))
+                    if self.WebsD.Ib_sp_stn < 1:
+                        raise Exception('web located inboard of the blade root')
+                    
+                    if self.WebsD.Ib_sp_stn > self.N_sections:
+                        raise Exception('web inboard end past last blade stn')
+                                                
+                    self.WebsD.Ob_sp_stn = int(self.__ReadGeneralInformation( pci.readline()))
+                    if self.WebsD.Ob_sp_stn < self.WebsD.Ib_sp_stn:
+                        raise Exception('web outboard end location not past the inboard location')
+                        
+                    if self.WebsD.Ob_sp_stn > self.N_sections:
+                        raise Exception('web outboard end past last blade stn')
+                    else:
+                        self.x1w = self.BssD[self.WebsD.Ib_sp_stn - 1].Span_loc
+                        self.l_web = self.BssD[self.WebsD.Ob_sp_stn - 1].Span_loc - self.x1w
+                    
+                    #parameters required later for locating webs within a blade section
+                    self.r1w = self.BssD[self.WebsD.Ib_sp_stn - 1].Le_loc
+                    self.r2w = self.BssD[self.WebsD.Ob_sp_stn - 1].Le_loc
+                    self.ch1 = self.BssD[self.WebsD.Ib_sp_stn - 1].Chord
+                    self.ch2 = self.BssD[self.WebsD.Ob_sp_stn - 1].Chord
+                    
+                    for i in range(2):
+                        pci.readline()
+                
+                    for web in range(self.WebsD.Nweb):
+                        web_num = WEB_NUM(pci.readline())
+                        if web == 0:
+                            if web_num.Web_num != 1:
+                                raise Exception('first web must be numbered 1')
+                        else:
+                            if web_num.Web_num != (web + 1):
+                                raise Exception('web numbering not sequential')
+                            if web_num.Inb_end_ch_loc < self.WebsD.Web_nums[web - 1].Inb_end_ch_loc:
+                                raise Exception('webs crossing: not allowed currently')
+                            if web_num.Oub_end_ch_loc < self.WebsD.Web_nums[web - 1].Oub_end_ch_loc:
+                                raise Exception('webs crossing: not allowed currently')    
+                                
+                        self.WebsD.Web_nums.append(web_num)
             except Exception,ex:
                 Fatal('Webs data Read error:' + ex.message)
-            
-            for i in range(2):
-                pci.readline()
                 
-            for web in range(self.WebsD.Nweb):
-                web_num = WEB_NUM(pci.readline())
-                self.WebsD.Web_nums.append(web_num)
+            PRInfo('main input file read successfully')
+            
+           
             
             
-            
+    def __tw_rate( self):
+        for section in range(1,self.N_sections - 1):
+            f0 = self.BssD[section].Tw_aero
+            f1 = self.BssD[section - 1].Tw_aero
+            f2 = self.BssD[section + 1].Tw_aero
+            h1 = self.BssD[section].Span_loc - self.BssD[section - 1].Span_loc
+            h2 = self.BssD[section + 1].Span_loc - self.BssD[section].Span_loc
+            self.BssD[section].th_prime = (h1*(f2-f0) + h2*(f0-f1))/(2.0*h1*h2)
+        self.BssD[0].th_prime = (self.BssD[2].Tw_aero-self.BssD[1].Tw_aero)/(self.BssD[2].Span_loc-self.BssD[1].Span_loc)
+        self.BssD[self.N_sections - 1].th_prime = (self.BssD[self.N_sections - 1].Tw_aero - self.BssD[self.N_sections - 2].Tw_aero)\
+        /(self.BssD[self.N_sections - 1].Span_loc-self.BssD[self.N_sections - 2].Span_loc)
+        
+        for section in range(self.N_sections):
+            self.BssD[section].phi_prime = 0.0
+            self.BssD[section].tphip = self.BssD[section].th_prime + 0.5 * self.BssD[section].phi_prime
+        
+        
+        
     def __ReadGeneralInformation( self, line):
         try:
             match = MIF.__giPattern.match(line)
@@ -151,6 +224,10 @@ class BSS:
                 self.Af_shape_file = match.group(5)
                 self.Int_str_file = match.group(6)
                 
+                self.th_prime = 0.0
+                self.phi_prime = 0.0
+                self.tphip = 0.0
+                
             else:
                 raise Exception('can not match the blade Sections Specific data:' + line) 
         except Exception,ex:
@@ -161,6 +238,7 @@ class WEBS:
     """
     def __init__( self):
         self.Nweb = 0
+        self.Webs_exist = 1
         self.Ib_sp_stn = 0
         self.Ob_sp_stn = 0
         self.Web_nums = []
@@ -185,4 +263,3 @@ class WEB_NUM:
 if __name__ == "__main__":
      mif = MIF()
      mif.Load('test01_composite_blade.pci')
-     pass
