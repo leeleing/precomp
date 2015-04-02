@@ -1,0 +1,8 @@
+Mat_Id    E1         E2      G12     Nu12    Density    Mat_Name
+ (-)     (Pa)       (Pa)     (Pa)    (-)     (Kg/m^3)     (-)
+
+  1     37.0e+9    9.0e+9   4.0e+9   0.28    1860.0    (uni-directional FRP)
+  2     10.3e+9   10.3e+9   8.0e+9   0.30    1830.0    (double-bias FRP)
+  3      0.1e+2    0.1e+2   0.1e+1   0.30    1830.0    (gelcoat)
+  4     10.3e+9   10.3e+9   8.0e+9   0.30    1664.0    (nexus)
+  5      1.0e+7    1.0e+7   0.2e+6   0.30    0128.0    (balsa)

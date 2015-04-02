@@ -50,6 +50,7 @@ class MIF:
         self.TabDelim = True
         self.BssD = []
         self.WebsD = WEBS()
+        self.Materials = []
         
         self.x1w = 0.0
         self.l_web = 0.0
@@ -59,7 +60,7 @@ class MIF:
         self.ch1 = 0.0
         self.ch2 = 0.0
     
-    def Load( self, file):
+    def LoadPci( self, file):
         with open(file) as pci:
             pci.readline()
             self.name = pci.readline()
@@ -116,9 +117,7 @@ class MIF:
             
             #get th_prime and phi_prime
             self.__tw_rate()
-            
-            
-                
+                   
             for i in range(3):
                 pci.readline()
             
@@ -178,7 +177,15 @@ class MIF:
             PRInfo('main input file read successfully')
             
            
-            
+    def LoadMaterials( self, file):
+        with open(file) as inp:
+            for i in range(3):
+                inp.readline()
+            for i in range(self.N_materials):
+                material = Material(inp.readline())
+                self.Materials.append(material)
+        PRInfo('material read successfully')
+                
             
     def __tw_rate( self):
         for section in range(1,self.N_sections - 1):
@@ -258,8 +265,36 @@ class WEB_NUM:
             else:
                 raise Exception('can not match the web data:' + line) 
         except Exception,ex:
-            Fatal(ex.message)  
+            Fatal(ex.message)
+
+class Material:
+    """material property
+    """
+    __linePattern = re.compile(r'\s+(\d+)\s+([\d\.e+-]+)\s+([\d\.e+-]+)\s+([\d\.e+-]+)\s+([\d\.e+-]+)\s+([\d\.e+-]+).+')
+    
+    def __init__( self, line):
+        try:
+            match = Material.__linePattern.match(line)
+            matdum = match.group(1)
+            e1 = float(match.group(2))
+            e2 = float(match.group(3))
+            g12 = float(match.group(4))
+            anu12 = float(match.group(5))
+            self.density = float(match.group(6))
+            
+            if anu12 > math.sqrt(e1/e2):
+                Warn(matdum + 'properties not consistent')
+                
+            anud = 1.0 - anu12*anu12*e2/e1
+            self.q11 = e1/anud
+            self.q22 = e2/anud
+            self.q12 = anu12*e2/anud
+            self.q66 = g12
+            
+        except Exception,ex:
+            Fatal(ex.message)
         
 if __name__ == "__main__":
      mif = MIF()
-     mif.Load('test01_composite_blade.pci')
+     mif.LoadPci('test01_composite_blade.pci')
+     mif.LoadMaterials('materials.inp')
