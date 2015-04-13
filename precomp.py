@@ -299,6 +299,47 @@ class Material:
         except Exception,ex:
             Fatal(ex.message)
 
+class ASF:
+    '''airfoil geometry
+    '''
+    __nsPattern = re.compile(r'^([^\s]+)\s+.+')
+    __nodeXYPattern = re.compile(r'^([\d\.eE+-]+)\s+([\d\.eE+-]+).+')
+    
+    def __init__( self, file):
+        try:
+            with open(file) as asf:
+                self.n_af_nodes = int(self.__ReadNodesNum(asf.readline()))
+                
+                for i in range(3):
+                    asf.readline()
+                    
+                if self.n_af_nodes <= 2:
+                    raise Exception('min 3 nodes reqd to define airfoil geometry')
+                
+                for node in range(self.n_af_nodes):
+                    self.xnode,self.ynode = self.__ReadNodeXY(asf.readline())
+                
+        except Exception,ex:
+            Fatal(ex.message)
+            
+    def __ReadNodesNum( self, line):
+        try:
+            match = ASF.__nsPattern.match(line)
+            if match:
+                return match.group(1)
+            raise Exception('can not match the general information:' + line) 
+        except Exception,ex:
+            Fatal(ex.message)
+
+    def __ReadNodeXY( self, line):
+        try:
+            match = ASF.__nodeXYPattern.match(line)
+            if match:
+                return (float(match.group(1)), float(match.group(2)))
+            raise Exception('can not match the general information:' + line) 
+        except Exception,ex:
+            Fatal(ex.message)
+    
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)
     OutFile_bmd = '%s.out_bmd' % (mifObject.file_name)
@@ -340,12 +381,24 @@ flp_stff%sedge_stff%stor_stff%saxial_stff%scg_offst%ssc_offst%stc_offst' % tuple
 (Nm^2)%s(Nm^2)%s(N)%s(m)%s(m)%s(m)' % tuple(('   ',) * 12))
             
     PRInfo('general out_format successfully')
+
         
 if __name__ == "__main__":
      mif = MIF()
      mif.LoadPci('test01_composite_blade.pci')
      mif.LoadMaterials('materials.inp')
      BuildOutFile(mif)
-     
+     #begin blade sections loop
+     PRInfo('begin blade sections loop')
+     for iaf in range(mif.N_sections):
+         PRInfo('BLADE STATION %d analysis begins' % (iaf+1))
+         
+         ch = mif.BssD[iaf].Chord
+         rle = mif.BssD[iaf].Le_loc
+         
+         asf = ASF(mif.BssD[iaf].Af_shape_file)
+         
+         PRInfo('BLADE STATION %d analysis ends' % (iaf+1))
+             
      
      
