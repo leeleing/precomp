@@ -359,7 +359,7 @@ class ASF:
         if self.xnode[location] > 1:
             Fatal('trailing-edge node exceeds chord boundary')
         
-        tenode_u = location
+        tenode_u = location + 1
         ncounter = 0
         for i in range(location, self.n_af_nodes):
             if abs(self.xnode[i] - self.xnode[location]) == 0:
@@ -387,6 +387,19 @@ class ASF:
         for i in range(1,tenode_l):
             self.xnode_l[i] = self.xnode[self.n_af_nodes-i]
             self.ynode_l[i] = self.ynode[self.n_af_nodes-i]
+    
+    def EnsureSingleValue(self):
+        for i in range(1, self.nodes_u):
+            if (self.xnode_u[i] - self.xnode_u[i-1]) == 0:
+                Fatal('upper surface not single-valued')
+        
+        for i in range(1, self.nodes_l):
+            if (self.xnode_l[i] - self.xnode_l[i-1]) == 0:
+                Fatal('lower surface not single-valued')
+    
+    def CheckClockwise(self):
+        if self.ynode_u[1]/self.xnode_u[1] <= self.ynode_l[1]/self.xnode_l[1]:
+            Fatal('airfoil node numbering not clockwise')
     
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)
@@ -447,6 +460,8 @@ if __name__ == "__main__":
          asf = ASF(mif.BssD[iaf].Af_shape_file)
          asf.CheckFirstNode()
          asf.IdentifyTrailingEdge()
+         asf.EnsureSingleValue()
+         asf.CheckClockwise()
          
          
          PRInfo('BLADE STATION %d analysis ends' % (iaf+1))
