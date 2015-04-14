@@ -309,6 +309,12 @@ class ASF:
         try:
             with open(file) as asf:
                 self.n_af_nodes = int(self.__ReadNodesNum(asf.readline()))
+                self.nodes_u = 0
+                self.xnode_u = []
+                self.ynode_u = []
+                self.nodes_l = 0
+                self.xnode_l = []
+                self.ynode_l = []
                 self.xnode = [0] * self.n_af_nodes
                 self.ynode = [0] * self.n_af_nodes
                 for i in range(3):
@@ -319,8 +325,6 @@ class ASF:
                 
                 for node in range(self.n_af_nodes):
                     self.xnode[node],self.ynode[node] = self.__ReadNodeXY(asf.readline())
-            
-            self.__CheckFirstNode()
         except Exception,ex:
             Fatal(ex.message)
             
@@ -342,13 +346,47 @@ class ASF:
         except Exception,ex:
             Fatal(ex.message)
     
-    def __CheckFirstNode(self):
+    def CheckFirstNode(self):
         location = self.xnode.index(min(self.xnode))
         if location != 0:
             Fatal('the first airfoil node not a leading node')
         
         if self.xnode[0] != 0 or self.ynode[0] != 0 :
             Fatal('leading-edge node not located at (0,0)')
+
+    def IdentifyTrailingEdge(self):
+        location = self.xnode.index(max(self.xnode))
+        if self.xnode[location] > 1:
+            Fatal('trailing-edge node exceeds chord boundary')
+        
+        tenode_u = location
+        ncounter = 0
+        for i in range(location, self.n_af_nodes):
+            if abs(self.xnode[i] - self.xnode[location]) == 0:
+                ncounter = i - location
+        tenode_l = tenode_u + ncounter
+        
+        if ncounter > 0:
+            PRInfo('blunt te identified between airfoil nodes %d and %d' % (tenode_u,tenode_l))
+        
+        self.nodes_u = tenode_u
+        self.xnode_u = [0] * self.nodes_u
+        self.ynode_u = [0] * self.nodes_u
+        self.nodes_l = self.n_af_nodes - tenode_l + 2
+        self.xnode_l = [0] * tenode_l
+        self.ynode_l = [0] * tenode_l
+        
+        
+        for i in range(self.nodes_u):
+            self.xnode_u[i] = self.xnode[i]
+            self.ynode_u[i] = self.ynode[i]
+        
+        self.xnode_l[0] = self.xnode[0]
+        self.ynode_l[0] = self.ynode[0]
+        
+        for i in range(1,tenode_l):
+            self.xnode_l[i] = self.xnode[self.n_af_nodes-i]
+            self.ynode_l[i] = self.ynode[self.n_af_nodes-i]
     
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)
@@ -407,6 +445,9 @@ if __name__ == "__main__":
          rle = mif.BssD[iaf].Le_loc
          
          asf = ASF(mif.BssD[iaf].Af_shape_file)
+         asf.CheckFirstNode()
+         asf.IdentifyTrailingEdge()
+         
          
          PRInfo('BLADE STATION %d analysis ends' % (iaf+1))
              
