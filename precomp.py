@@ -25,19 +25,19 @@ def PRSetDebugLevel(level):
 def PRInfo( str ):
     global DebugLevel
     if DebugLevel >= 1:
-        print >> sys.stderr, str
+        print >> sys.stdout, str
 
 def PRDebug( str ):
     global DebugLevel
     if DebugLevel >= 2:
-        print >> sys.stderr, str
+        print >> sys.stdout, str
         
 def Fatal( str ):
 	print >> sys.stderr, 'Error',str
 	sys.exit(-1)
  
 def Warn( str ):
-	print >> sys.stderr, 'Warning',str
+	print >> sys.stdout, 'Warning',str
  
 class MIF:
     """Main input file class
@@ -303,13 +303,14 @@ class ASF:
     '''airfoil geometry
     '''
     __nsPattern = re.compile(r'^([^\s]+)\s+.+')
-    __nodeXYPattern = re.compile(r'^([\d\.eE+-]+)\s+([\d\.eE+-]+).+')
+    __nodeXYPattern = re.compile(r'^([\d\.eE+-]+)\s+([\d\.eE+-]+).*')
     
     def __init__( self, file):
         try:
             with open(file) as asf:
                 self.n_af_nodes = int(self.__ReadNodesNum(asf.readline()))
-                
+                self.xnode = [0] * self.n_af_nodes
+                self.ynode = [0] * self.n_af_nodes
                 for i in range(3):
                     asf.readline()
                     
@@ -317,8 +318,9 @@ class ASF:
                     raise Exception('min 3 nodes reqd to define airfoil geometry')
                 
                 for node in range(self.n_af_nodes):
-                    self.xnode,self.ynode = self.__ReadNodeXY(asf.readline())
-                
+                    self.xnode[node],self.ynode[node] = self.__ReadNodeXY(asf.readline())
+            
+            self.__CheckFirstNode()
         except Exception,ex:
             Fatal(ex.message)
             
@@ -339,6 +341,14 @@ class ASF:
             raise Exception('can not match the general information:' + line) 
         except Exception,ex:
             Fatal(ex.message)
+    
+    def __CheckFirstNode(self):
+        location = self.xnode.index(min(self.xnode))
+        if location != 0:
+            Fatal('the first airfoil node not a leading node')
+        
+        if self.xnode[0] != 0 or self.ynode[0] != 0 :
+            Fatal('leading-edge node not located at (0,0)')
     
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)
