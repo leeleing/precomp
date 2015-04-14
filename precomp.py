@@ -401,6 +401,20 @@ class ASF:
         if self.ynode_u[1]/self.xnode_u[1] <= self.ynode_l[1]/self.xnode_l[1]:
             Fatal('airfoil node numbering not clockwise')
     
+    def CheckSingleConnectivity(self):
+        for j in range(1,self.nodes_l-1):
+            x = self.xnode_l[j]
+            for i in range(self.nodes_u-1):
+                xl = self.xnode_u[i]
+                xr = self.xnode_u[i+1]
+                
+                if x >= xl and x <= xr:
+                    yl = self.ynode_u[i]
+                    yr = self.ynode_u[i+1]
+                    y = yl + (yr-yl)*(x-xl)/(xr-xl)
+                    if self.ynode_l[j] >= y:
+                        Fatal('airfoil shape self-crossing')
+    
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)
     OutFile_bmd = '%s.out_bmd' % (mifObject.file_name)
@@ -462,6 +476,7 @@ if __name__ == "__main__":
          asf.IdentifyTrailingEdge()
          asf.EnsureSingleValue()
          asf.CheckClockwise()
+         asf.CheckSingleConnectivity()
          
          
          PRInfo('BLADE STATION %d analysis ends' % (iaf+1))
