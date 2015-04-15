@@ -234,7 +234,13 @@ class MIF:
                     self.WebsD.Web_nums[i].loc_web = rle - (self.r1w-p1w)*self.ch1*(1.-xlocn)/ch-(self.r2w-p2w)*self.ch2*xlocn/ch
                     if self.WebsD.Web_nums[i].loc_web < 0 or self.WebsD.Web_nums[i].loc_web > 1:
                         Fatal('web no %d outside airfoil boundary at the current blade station' % i)
-                
+    
+    
+    def EmbedAirfoilNodes(self, asf):
+        if self.WebsD.Webs_exist == 1:
+            for i in range(self.WebsD.Nweb):
+                self.WebsD.Web_nums[i].weby_u = asf.Embed_us(self.WebsD.Web_nums[i].loc_web)
+                self.WebsD.Web_nums[i].weby_l = asf.Embed_ls(self.WebsD.Web_nums[i].loc_web)
         
 
 class BSS:
@@ -285,6 +291,8 @@ class WEB_NUM:
                 self.Inb_end_ch_loc = float(match.group(2))
                 self.Oub_end_ch_loc = float(match.group(3))
                 self.loc_web = 0.0
+                self.weby_u = 0.0
+                self.weby_l = 0.0
             else:
                 raise Exception('can not match the web data:' + line) 
         except Exception,ex:
@@ -432,6 +440,88 @@ class ASF:
                     y = yl + (yr-yl)*(x-xl)/(xr-xl)
                     if self.ynode_l[j] >= y:
                         Fatal('airfoil shape self-crossing')
+                        
+    def Embed_us(self, loc_web):
+        newnode = -1
+        for i in range(self.nodes_u - 1):
+            xl = self.xnode_u[i]
+            xr = self.xnode_u[i+1]
+            yl = self.ynode_u[i]
+            if abs(loc_web - xl) <= 0:
+                newnode = 0
+                isave = i
+                y = yl
+                break
+            else:
+                if loc_web < xr:
+                    yr = self.ynode_u[i+1]
+                    y = yl + (yr-yl)*(loc_web-xl)/(xr-xl)
+                    newnode = i + 1
+                    break
+        if newnode == -1:
+            if abs(loc_web - self.xnode_u[self.nodes_u - 1]) <= 0:
+                newnode = 0
+                isave = self.nodes_u - 1
+                y = self.ynode_u[self.nodes_u - 1]
+            else:
+                Fatal('ERROR unknown, consult NWTC')
+        
+        if newnode > 0:
+            self.nodes_u = self.nodes_u + 1
+            self.xnode_u.append(0)
+            self.ynode_u.append(0)
+            
+            for i in range(self.nodes_u - 1,newnode,-1):
+                self.xnode_u[i] = self.xnode_u[i-1]
+                self.ynode_u[i] = self.ynode_u[i-1]
+                
+            self.xnode_u[newnode] = loc_web
+            self.ynode_u[newnode] = y
+        else:
+            newnode = isave
+                
+        return (y,newnode)
+        
+    def Embed_ls(self, loc_web):
+        newnode = -1
+        for i in range(self.nodes_l - 1):
+            xl = self.xnode_l[i]
+            xr = self.xnode_l[i+1]
+            yl = self.ynode_l[i]
+            if abs(loc_web - xl) <= 0:
+                newnode = 0
+                isave = i
+                y = yl
+                break
+            else:
+                if loc_web < xr:
+                    yr = self.ynode_l[i+1]
+                    y = yl + (yr-yl)*(loc_web-xl)/(xr-xl)
+                    newnode = i + 1
+                    break
+        if newnode == -1:
+            if abs(loc_web - self.xnode_l[self.nodes_l - 1]) <= 0:
+                newnode = 0
+                isave = self.nodes_l - 1
+                y = self.ynode_u[self.nodes_l - 1]
+            else:
+                Fatal('ERROR unknown, consult NWTC')
+        
+        if newnode > 0:
+            self.nodes_l = self.nodes_l + 1
+            self.xnode_l.append(0)
+            self.ynode_l.append(0)
+            
+            for i in range(self.nodes_l - 1,newnode,-1):
+                self.xnode_l[i] = self.xnode_l[i-1]
+                self.ynode_l[i] = self.ynode_l[i-1]
+                
+            self.xnode_l[newnode] = loc_web
+            self.ynode_l[newnode] = y
+        else:
+            newnode = isave
+                
+        return (y,newnode)
     
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)
@@ -497,6 +587,7 @@ if __name__ == "__main__":
          asf.CheckSingleConnectivity()
          
          mif.FindChordwiseLocation(iaf,rle,ch)
+         mif.EmbedAirfoilNodes(asf)
          
          PRInfo('BLADE STATION %d analysis ends' % (iaf+1))
              
