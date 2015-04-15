@@ -218,6 +218,23 @@ class MIF:
             raise Exception('can not match the general information:' + line) 
         except Exception,ex:
             Fatal(ex.message)
+    
+    def FindChordwiseLocation(self, iaf, rle, ch):
+        if self.WebsD.Nweb >= 1:
+            self.WebsD.Webs_exist = 1
+            
+            if iaf < self.WebsD.Ib_sp_stn or iaf > self.WebsD.Ob_sp_stn:
+                PRInfo('No web at the this blade station.')
+                self.WebsD.Webs_exist = 0
+            else:
+                xlocn = (self.BssD[iaf].Span_loc-self.x1w)/self.l_web
+                for i in range(self.WebsD.Nweb):
+                    p1w = self.WebsD.Web_nums[i].Inb_end_ch_loc
+                    p2w = self.WebsD.Web_nums[i].Oub_end_ch_loc
+                    self.WebsD.Web_nums[i].loc_web = rle - (self.r1w-p1w)*self.ch1*(1.-xlocn)/ch-(self.r2w-p2w)*self.ch2*xlocn/ch
+                    if self.WebsD.Web_nums[i].loc_web < 0 or self.WebsD.Web_nums[i].loc_web > 1:
+                        Fatal('web no %d outside airfoil boundary at the current blade station' % i)
+                
         
 
 class BSS:
@@ -267,6 +284,7 @@ class WEB_NUM:
                 self.Web_num = int(match.group(1))
                 self.Inb_end_ch_loc = float(match.group(2))
                 self.Oub_end_ch_loc = float(match.group(3))
+                self.loc_web = 0.0
             else:
                 raise Exception('can not match the web data:' + line) 
         except Exception,ex:
@@ -478,6 +496,7 @@ if __name__ == "__main__":
          asf.CheckClockwise()
          asf.CheckSingleConnectivity()
          
+         mif.FindChordwiseLocation(iaf,rle,ch)
          
          PRInfo('BLADE STATION %d analysis ends' % (iaf+1))
              
