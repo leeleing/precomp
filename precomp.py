@@ -522,6 +522,216 @@ class ASF:
             newnode = isave
                 
         return (y,newnode)
+
+class ISD:
+    '''internal srtucture data
+    '''
+    __nsPattern = re.compile(r'^([^\s]+)\s+.+')
+    __xnPattern = re.compile(r'^([\d\.eE+-]+)\s+([\d\.eE+-]+).*')
+    
+    def __init__( self, file, mif, asf):
+        try:
+            self.n_scts = [0] * 2
+            self.xsec_node = [[]] * 2
+            self.n_laminas = [[]] * 2
+            self.tht_lam = [[[]]] * 2
+            self.mat_id = [[[]]] * 2
+            self.tlam = [[[]]] * 2
+            self.n_weblams = []
+            self.tht_wlam = [[]]
+            self.twlam = [[]]
+            self.wmat_id = [[]]
+                        
+            with open(file) as isd:
+                for ins in range(2):
+                    for x in range(3):
+                        isd.readline()
+                    
+                    self.n_scts[ins] = int(self.__ReadSectorsNum(isd.readline()))
+                    nsects = self.n_scts[ins]
+                    
+                    if nsects <= 0 :
+                        raise Exception('no of sectors not positive')
+                        
+                    for x in range(2):
+                        isd.readline()
+                    
+                    self.xsec_node[ins] = [0.0] * (nsects + 1)
+                    self.xsec_node[ins] = [float(x) for x in isd.readline().split()]
+                    if self.xsec_node[ins][0] < 0 :
+                        raise Exception('sector node x-location not positive')
+                    
+                    if ins == 1:
+                        xu1 = self.xsec_node[ins][0]
+                        xu2 = self.xsec_node[ins][nsects]
+                        
+                        if xu2 > asf.xnode_u[asf.nodes_u - 1]:
+                            raise Exception('upper-surf last sector node out of bounds')
+                        else:
+                            xl1 = self.xsec_node[ins][0]
+                            xl2 = self.xsec_node[ins][nsects]
+                            
+                            if xl2 > asf.xnode_l[asf.nodes_l - 1]:
+                                raise Exception('lower-surf last sector node out of bounds')
+                        
+                    for i in range(nsects):
+                        if self.xsec_node[ins][i+1] <= self.xsec_node[ins][i]:
+                            raise Exception('sector nodal x-locations not in ascending order')
+                    
+                    self.n_laminas[ins] = [0] * nsects
+                    self.tht_lam[ins] = [0] * nsects
+                    self.mat_id[ins] = [0] * nsects
+                    self.tlam[ins] = [0] * nsects
+                    
+                    
+                    for isect in range(nsects):
+                        for x in range(2):
+                            isd.readline()
+                    
+                        idum,self.n_laminas[ins][isect] = [int(x) for x in isd.readline.split()]
+                        
+                        self.tht_lam[ins][isect] = [0] * self.n_laminas[ins][isect]
+                        self.mat_id[ins][isect] = [0] * self.n_laminas[ins][isect]
+                        self.tlam[ins][isect] = [0] * self.n_laminas[ins][isect]
+                        
+                        if idum != isect:
+                            raise Exception('%d is a wrong or out-of-sequence sector number' % idum)
+                        
+                        for x in range(4):
+                            isd.readline()
+                        
+                        for lam in range(self.n_laminas[ins][isect]):
+                            laminae = isd.readline().split()
+                            idum = int(laminae[0])
+                            n_plies = int(laminae[1])
+                            tply = float(laminae[2])
+                            self.tht_lam[ins][isect][lam] = int(laminae[3])
+                            self.mat_id[ins][isect][lam] = int(laminae[4])
+                            
+                            if idum != lam:
+                                raise Exception('%d is a wrong or out-of-sequence lamina number' % idum)
+                            self.tlam[ins][isect][lam] = n_plies*tply
+                            self.tht_lam[ins][isect][lam] = math.radians(self.tht_lam[ins][isect][lam])
+                    
+                    for i in range(nsects+1):
+                        if ins == 0:
+                            ynd,newnode = asf.Embed_us(self.xsec_node[ins][i])
+                            
+                            if i == 1:
+                                yu1 = ynd
+                                ndu1 = newnode
+                            
+                            if i == nsects:
+                                yu2 = ynd
+                                ndu2 = newnode
+                        
+                        if ins == 1:
+                            ynd,newnode = asf.Embed_ls(self.xsec_node[ins][i])
+                            
+                            if i == 1:
+                                yl1 = ynd
+                                ndl1 = newnode
+                            
+                            if i == nsects:
+                                yl2 = ynd
+                                ndl2 = newnode
+                #end blade surfaces loop
+                #check for le and te non-closures and issue warning
+                if abs(xu1-xl1) > 0:
+                    Warn('the leading edge may be open; check closure')
+                else:
+                    if (yu1 - yl1) > 0:
+                        wreq = 1
+                        
+                        if mif.WebsD.Webs_exist != 0:
+                            if abs(xu1 - mif.WebsD.Web_nums[0].loc_web) == 0:
+                                wreq = 0
+                        
+                        if wreq == 1:
+                            Warn('open leading edge; check web requirement')
+                
+                if abs(xu2 - xl2) > 0:
+                    Warn('the trailing edge may be open; check closure')
+                else:
+                    if (yu2 - yl2) > 0:
+                        wreq = 1
+                    
+                    if mif.WebsD.Webs_exist != 0:
+                        if abs(xu2 - mif.WebsD.Web_nums[mif.WebsD.Nweb - 1].loc_web) == 0:
+                            wreq = 0
+                    
+                    if wreq == 1:
+                        Warn('open trailing edge; check web requirement')
+                
+                if mif.WebsD.Webs_exist == 1:
+                    for x in range(4):
+                        isd.readline()
+                    
+                    self.n_weblams = [0] * mif.WebsD.Nweb
+                    self.tht_wlam = [0] * mif.WebsD.Nweb
+                    self.wmat_id = [0] * mif.WebsD.Nweb
+                    self.twlam = [0] * mif.WebsD.Nweb
+                    
+                    for iweb in range(mif.WebsD.Nweb):
+                        for x in range(2):
+                            isd.readline()
+                        idum, self.n_weblams[iweb] = [int(x) for x in isd.readline().split()]
+                        
+                        if idum != iweb:
+                            Fatal('%d is a wrong or out-of-sequence web number' % idum)
+                        
+                        for x in range(4):
+                            isd.readline()
+                        
+                        self.tht_wlam[iweb] = [0] * self.n_weblams[iweb]
+                        self.wmat_id[iweb] = [0] * self.n_weblams[iweb]
+                        self.twlam[iweb] = [0] * self.n_weblams[iweb]
+                        for lam in range(self.n_weblams[iweb]):
+                            weblams = isd.readline().split()
+                            idum = int(weblams[0])
+                            n_plies = int(weblams[1])
+                            tply = float(weblams[2])
+                            self.tht_wlam[iweb][lam] = int(weblams[3])
+                            self.wmat_id[iweb][lam] = int(weblams[4])
+                            
+                            if idum != lam :
+                                Fatal('%d is a wrong or out-of-sequence web lamina number' % idum)
+                            
+                            self.twlam[iweb][lam] = n_plies*tply
+                            self.tht_wlam[iweb][lam] = math.radians(self.tht_wlam[iweb][lam])
+                
+                    
+                    if mif.WebsD.Web_nums[0].loc_web < xu1 or mif.WebsD.Web_nums[0].loc_web < xl1:
+                        Fatal('first web out of sectors-bounded airfoil')
+                    
+                    if mif.WebsD.Web_nums[mif.WebsD.Nweb - 1].loc_web > xu2 or \
+mif.WebsD.Web_nums[mif.WebsD.Nweb - 1].loc_web > xl2:
+                        Fatal('last web out of sectors-bounded airfoil')
+                
+            #all inputs successfully read and checked
+            PRInfo('read internal srtucture data successfully')
+               
+                        
+        except Exception,ex:
+            Fatal(ex.message)
+            
+    def __ReadSectorsNum( self, line):
+        try:
+            match = ASF.__nsPattern.match(line)
+            if match:
+                return match.group(1)
+            raise Exception('can not match the general information:' + line) 
+        except Exception,ex:
+            Fatal(ex.message)
+    
+    def __ReadChordLocation( self, line):
+        try:
+            match = ASF.__nsPattern.match(line)
+            if match:
+                return match.group(1)
+            raise Exception('can not match the general information:' + line) 
+        except Exception,ex:
+            Fatal(ex.message)
     
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)
@@ -588,6 +798,8 @@ if __name__ == "__main__":
          
          mif.FindChordwiseLocation(iaf,rle,ch)
          mif.EmbedAirfoilNodes(asf)
+         
+         isd = ISD(mif.BssD[iaf].Int_str_file, mif, asf)
          
          PRInfo('BLADE STATION %d analysis ends' % (iaf+1))
              
