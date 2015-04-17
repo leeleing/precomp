@@ -33,11 +33,11 @@ def PRDebug( str ):
         print >> sys.stdout, str
         
 def Fatal( str ):
-	print >> sys.stderr, 'Error',str
-	sys.exit(-1)
+    print >> sys.stderr, 'Error',str
+    sys.exit(-1)
  
 def Warn( str ):
-	print >> sys.stdout, 'Warning',str
+    print >> sys.stdout, 'Warning',str
  
 class MIF:
     """Main input file class
@@ -91,7 +91,7 @@ class MIF:
                 self.TabDelim  = (self.__ReadGeneralInformation( pci.readline()) == 't' and True) or False
                                 
             except Exception,ex:
-                Fatal('General information Read error:' + ex.message)
+                Fatal('General information Read error:' + str(ex))
             
             for i in range(7):
                 pci.readline()
@@ -177,7 +177,7 @@ class MIF:
                                 
                         self.WebsD.Web_nums.append(web_num)
             except Exception,ex:
-                Fatal('Webs data Read error:' + ex.message)
+                Fatal('Webs data Read error:' + str(ex))
                 
             PRInfo('main input file read successfully')
             
@@ -217,13 +217,13 @@ class MIF:
                 return match.group(1)
             raise Exception('can not match the general information:' + line) 
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
     
     def FindChordwiseLocation(self, iaf, rle, ch):
         if self.WebsD.Nweb >= 1:
             self.WebsD.Webs_exist = 1
             
-            if iaf < self.WebsD.Ib_sp_stn or iaf > self.WebsD.Ob_sp_stn:
+            if iaf < (self.WebsD.Ib_sp_stn - 1) or iaf > (self.WebsD.Ob_sp_stn - 1):
                 PRInfo('No web at the this blade station.')
                 self.WebsD.Webs_exist = 0
             else:
@@ -266,7 +266,7 @@ class BSS:
             else:
                 raise Exception('can not match the blade Sections Specific data:' + line) 
         except Exception,ex:
-            Fatal(ex.message)        
+            Fatal(str(ex))
         
 class WEBS:
     """Webs (spars) data class
@@ -296,7 +296,7 @@ class WEB_NUM:
             else:
                 raise Exception('can not match the web data:' + line) 
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
 
 class Material:
     """material property
@@ -323,7 +323,7 @@ class Material:
             self.q66 = g12
             
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
 
 class ASF:
     '''airfoil geometry
@@ -352,7 +352,7 @@ class ASF:
                 for node in range(self.n_af_nodes):
                     self.xnode[node],self.ynode[node] = self.__ReadNodeXY(asf.readline())
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
             
     def __ReadNodesNum( self, line):
         try:
@@ -361,7 +361,7 @@ class ASF:
                 return match.group(1)
             raise Exception('can not match the general information:' + line) 
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
 
     def __ReadNodeXY( self, line):
         try:
@@ -370,7 +370,7 @@ class ASF:
                 return (float(match.group(1)), float(match.group(2)))
             raise Exception('can not match the general information:' + line) 
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
     
     def CheckFirstNode(self):
         location = self.xnode.index(min(self.xnode))
@@ -561,7 +561,7 @@ class ISD:
                     if self.xsec_node[ins][0] < 0 :
                         raise Exception('sector node x-location not positive')
                     
-                    if ins == 1:
+                    if ins == 0:
                         xu1 = self.xsec_node[ins][0]
                         xu2 = self.xsec_node[ins][nsects]
                         
@@ -588,13 +588,13 @@ class ISD:
                         for x in range(2):
                             isd.readline()
                     
-                        idum,self.n_laminas[ins][isect] = [int(x) for x in isd.readline.split()]
+                        idum,self.n_laminas[ins][isect] = [int(x) for x in isd.readline().split()]
                         
                         self.tht_lam[ins][isect] = [0] * self.n_laminas[ins][isect]
                         self.mat_id[ins][isect] = [0] * self.n_laminas[ins][isect]
                         self.tlam[ins][isect] = [0] * self.n_laminas[ins][isect]
                         
-                        if idum != isect:
+                        if (idum - 1) != isect:
                             raise Exception('%d is a wrong or out-of-sequence sector number' % idum)
                         
                         for x in range(4):
@@ -608,7 +608,7 @@ class ISD:
                             self.tht_lam[ins][isect][lam] = int(laminae[3])
                             self.mat_id[ins][isect][lam] = int(laminae[4])
                             
-                            if idum != lam:
+                            if (idum - 1) != lam:
                                 raise Exception('%d is a wrong or out-of-sequence lamina number' % idum)
                             self.tlam[ins][isect][lam] = n_plies*tply
                             self.tht_lam[ins][isect][lam] = math.radians(self.tht_lam[ins][isect][lam])
@@ -617,7 +617,7 @@ class ISD:
                         if ins == 0:
                             ynd,newnode = asf.Embed_us(self.xsec_node[ins][i])
                             
-                            if i == 1:
+                            if i == 0:
                                 yu1 = ynd
                                 ndu1 = newnode
                             
@@ -628,7 +628,7 @@ class ISD:
                         if ins == 1:
                             ynd,newnode = asf.Embed_ls(self.xsec_node[ins][i])
                             
-                            if i == 1:
+                            if i == 0:
                                 yl1 = ynd
                                 ndl1 = newnode
                             
@@ -656,12 +656,12 @@ class ISD:
                     if (yu2 - yl2) > 0:
                         wreq = 1
                     
-                    if mif.WebsD.Webs_exist != 0:
-                        if abs(xu2 - mif.WebsD.Web_nums[mif.WebsD.Nweb - 1].loc_web) == 0:
-                            wreq = 0
-                    
-                    if wreq == 1:
-                        Warn('open trailing edge; check web requirement')
+                        if mif.WebsD.Webs_exist != 0:
+                            if abs(xu2 - mif.WebsD.Web_nums[mif.WebsD.Nweb - 1].loc_web) == 0:
+                                wreq = 0
+                        
+                        if wreq == 1:
+                            Warn('open trailing edge; check web requirement')
                 
                 if mif.WebsD.Webs_exist == 1:
                     for x in range(4):
@@ -677,7 +677,7 @@ class ISD:
                             isd.readline()
                         idum, self.n_weblams[iweb] = [int(x) for x in isd.readline().split()]
                         
-                        if idum != iweb:
+                        if (idum - 1) != iweb:
                             Fatal('%d is a wrong or out-of-sequence web number' % idum)
                         
                         for x in range(4):
@@ -694,7 +694,7 @@ class ISD:
                             self.tht_wlam[iweb][lam] = int(weblams[3])
                             self.wmat_id[iweb][lam] = int(weblams[4])
                             
-                            if idum != lam :
+                            if (idum - 1) != lam :
                                 Fatal('%d is a wrong or out-of-sequence web lamina number' % idum)
                             
                             self.twlam[iweb][lam] = n_plies*tply
@@ -713,25 +713,25 @@ mif.WebsD.Web_nums[mif.WebsD.Nweb - 1].loc_web > xl2:
                
                         
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
             
     def __ReadSectorsNum( self, line):
         try:
-            match = ASF.__nsPattern.match(line)
+            match = ISD.__nsPattern.match(line)
             if match:
                 return match.group(1)
             raise Exception('can not match the general information:' + line) 
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
     
     def __ReadChordLocation( self, line):
         try:
-            match = ASF.__nsPattern.match(line)
+            match = ISD.__nsPattern.match(line)
             if match:
                 return match.group(1)
             raise Exception('can not match the general information:' + line) 
         except Exception,ex:
-            Fatal(ex.message)
+            Fatal(str(ex))
     
 def BuildOutFile(mifObject):
     OutFile_gen = '%s.out_gen' % (mifObject.file_name)

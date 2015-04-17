@@ -1,0 +1,110 @@
+Composite laminae lay-up inside the blade section
+
+*************************** TOP SURFACE ****************************
+3           N_scts(1):  no of sectors on top surface
+
+normalized chord location of  nodes defining airfoil sectors boundaries (xsec_node)
+0.0         0.15        0.50        1.00
+..................................................................
+Sect_num    no of laminae (N_laminas)
+1                3
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)       (deg)               (-)
+lam_num  N_plies    Tply         Tht_lam            Mat_id
+1            1    0.000381         0                  3 ( gelcoat)
+2            1    0.00051          0                  4 (nexus)
+3           33    0.00053         20                  2 ( double-bias)
+..................................................................
+Sect_num    no of laminae
+2                7
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)       (deg)               (-)
+lam_num  N_plies    Tply         Tht_lam            Mat_id
+1            1    0.000381          0                 3 (gelcoat)
+2            1    0.00051           0                 4 (nexus)
+3           17    0.00053          20                 2 (double-bias)
+4           38    0.00053          30                 1 (uni)
+5            0    0.003125          0                 5 (balsa)
+6           37    0.00053          30                 1 (uni)
+7           16    0.00053          20                 2 (double-bias)
+..................................................................
+Sect_num    no of laminae
+3                5
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)       (deg)               (-)
+lam_num  N_plies    Tply         Tht_lam            Mat_id
+1            1    0.000381          0                 3 (gelcoat)
+2            1    0.00051           0                 4 (nexus)
+3           17    0.00053          20                 2 (double-bias)
+4            0    0.003125          0                 5 (balsa)
+5           16    0.00053           0                 2 (double-bias)
+
+
+*************************** BOTTOM SURFACE ****************************
+3           N_scts(2):  no of sectors on bottom surfaces
+
+normalized chord location of surface nodes defining sector boundaries (xsec_node)
+0.0         0.15        0.50        1.00
+..................................................................
+Sect_num    no of laminae
+1                3
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)       (deg)               (-)
+lam_num  N_plies    Tply         Tht_lam            Mat_id
+1            1    0.000381          0                3 (gelcoat)
+2            1    0.00051           0                4 (nexus)
+3           33    0.00053          20                2 (double-bias)
+..................................................................
+Sect_num    no of laminae
+2                7
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)       (deg)               (-)
+lam_num  N_plies    Tply         Tht_Lam            Mat_Id
+1            1    0.000381         0                  3 (gelcoat)
+2            1    0.00051          0                  4 (nexus)
+3           17    0.00053         20                  2 (double-bias)
+4           38    0.00053         30                  1 (uni)
+5            0    0.003125         0                  5 (balsa)
+6           37    0.00053         30                  1 (uni)
+7           16    0.00053         20                  2 (double-bias)
+..................................................................
+Sect_num    no of laminae
+3                5
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)       (deg)               (-)
+lam_num  N_Plies    Tply         Tht_Lam            Mat_Id
+1            1    0.000381         0                  3 (gelcoat)
+2            1    0.00051          0                  4 (nexus)
+3           17    0.00053         20                  2 (double-bias)
+4            0    0.003125         0                  5 (balsa)
+5           16    0.00053          0                  2 (double-bias)
+
+
+**********************************************************************
+Laminae schedule for webs (input required only if webs exist at this section):
+
+web_num    no of laminae (N_weblams)
+1                3
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)       (deg)               (-)
+wlam_num N_Plies   w_tply       Tht_Wlam            Wmat_Id
+1           38    0.00053          0                   1 (uni)
+2            0    0.003125         0                   5 (balsa)
+3           37    0.00053          0                   1 (uni)
+
+web_num    no of laminae
+2                3
+
+lamina    num of  thickness   fibers_direction  composite_material ID
+number    plies   of ply (m)      (deg)               (-)
+wlam_num N_Plies   w_tply       Tht_Wlam            Wmat_Id
+1           38    0.00053          0                   1 (uni)
+2            0    0.003125         0                   5 (balsa)
+3           37    0.00053          0                   1 (uni)
